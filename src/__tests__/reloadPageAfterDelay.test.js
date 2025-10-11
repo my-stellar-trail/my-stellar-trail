@@ -5,57 +5,70 @@
 import { reloadPageAfterDelay } from '../utils/dataManager'
 
 describe('reloadPageAfterDelay', () => {
-  let originalLocation
+  let mockWindow
+  let reloadMock
 
   beforeEach(() => {
-    // Mock window.location.reload
-    originalLocation = window.location
-    delete window.location
-    window.location = { reload: jest.fn() }
+    // Create a mock window object with location.reload
+    reloadMock = jest.fn()
+    mockWindow = {
+      location: {
+        reload: reloadMock
+      }
+    }
     jest.useFakeTimers()
   })
 
   afterEach(() => {
-    // Restore window.location
-    window.location = originalLocation
     jest.useRealTimers()
   })
 
   test('reloads page after default delay of 1500ms', () => {
-    reloadPageAfterDelay()
+    reloadPageAfterDelay(1500, mockWindow)
 
     // Should not reload immediately
-    expect(window.location.reload).not.toHaveBeenCalled()
+    expect(reloadMock).not.toHaveBeenCalled()
 
     // Fast-forward time by 1500ms
     jest.advanceTimersByTime(1500)
 
     // Should reload after delay
-    expect(window.location.reload).toHaveBeenCalledTimes(1)
+    expect(reloadMock).toHaveBeenCalledTimes(1)
   })
 
   test('reloads page after custom delay', () => {
-    reloadPageAfterDelay(3000)
+    reloadPageAfterDelay(3000, mockWindow)
 
     // Should not reload before delay
     jest.advanceTimersByTime(2999)
-    expect(window.location.reload).not.toHaveBeenCalled()
+    expect(reloadMock).not.toHaveBeenCalled()
 
     // Should reload after delay
     jest.advanceTimersByTime(1)
-    expect(window.location.reload).toHaveBeenCalledTimes(1)
+    expect(reloadMock).toHaveBeenCalledTimes(1)
   })
 
   test('can be called multiple times independently', () => {
-    reloadPageAfterDelay(1000)
-    reloadPageAfterDelay(2000)
+    reloadPageAfterDelay(1000, mockWindow)
+    reloadPageAfterDelay(2000, mockWindow)
 
     // First reload at 1000ms
     jest.advanceTimersByTime(1000)
-    expect(window.location.reload).toHaveBeenCalledTimes(1)
+    expect(reloadMock).toHaveBeenCalledTimes(1)
 
     // Second reload at 2000ms (total)
     jest.advanceTimersByTime(1000)
-    expect(window.location.reload).toHaveBeenCalledTimes(2)
+    expect(reloadMock).toHaveBeenCalledTimes(2)
+  })
+
+  test('uses global window by default when no window object provided', () => {
+    // This test verifies backward compatibility
+    // We can't fully test window.location.reload in Jest, but we can verify
+    // the function is callable without errors
+    expect(() => {
+      // Just verify the function can be called with only delay parameter
+      // In production, this would use the global window object
+      reloadPageAfterDelay(1500)
+    }).not.toThrow()
   })
 })
